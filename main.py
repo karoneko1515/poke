@@ -597,6 +597,7 @@ def generate_category_chart():
 if __name__ == '__main__':
     # ブラウザでアプリケーションを起動
     try:
-        eel.start('index.html', size=(1200, 800), port=8000)
+        # host='0.0.0.0' で外部からのアクセスを許可（ngrok対応）
+        eel.start('index.html', size=(1200, 800), port=8000, host='0.0.0.0')
     except Exception as e:
         print(f"アプリケーションの起動に失敗しました: {e}")

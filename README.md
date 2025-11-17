@@ -39,15 +39,26 @@ python3 run_app.py
 ./run_app.py
 ```
 
-### 方法2: コマンドファイル
+### 方法2: スマホから外出先でアクセス（ngrok版）
+```bash
+python3 run_app_with_ngrok.py
+```
+または
+```bash
+./run_app_with_ngrok.py
+```
+
+**📱 詳しい設定方法は [REMOTE_ACCESS.md](REMOTE_ACCESS.md) を参照**
+
+### 方法3: コマンドファイル
 ```bash
 ./start_app.command
 ```
 
-### 方法3: macOSアプリ
+### 方法4: macOSアプリ
 Finderで `ポケモンカード資産管理.app` をダブルクリック
 
-### 方法4: 手動起動
+### 方法5: 手動起動
 ```bash
 source venv/bin/activate
 python main.py
