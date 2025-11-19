@@ -75,6 +75,17 @@ source venv/bin/activate
 python main.py
 ```
 
+### 🍓 方法7: Raspberry Piで24時間サーバー運用（推奨）
+
+Raspberry PiでTailscaleを使って常時稼働サーバーを構築できます。
+
+**📱 詳しい設定方法は [RASPBERRY_PI_SETUP.md](RASPBERRY_PI_SETUP.md) を参照**
+
+メリット：
+- 24時間いつでもスマホからアクセス可能
+- 電気代は月約50円
+- PCを起動しておく必要なし
+
 ## 🛠️ 初回セットアップ
 
 1. **仮想環境の作成**:
