@@ -69,6 +69,9 @@ async function loadDashboardMobile() {
     }
 }
 
+// グローバル変数でチャートインスタンスを保持
+let portfolioChartInstance = null;
+
 // ポートフォリオチャート読み込み
 async function loadPortfolioChartMobile() {
     try {
@@ -77,7 +80,13 @@ async function loadPortfolioChartMobile() {
         if (result.success) {
             const ctx = document.getElementById('portfolio-chart-mobile');
             if (ctx) {
-                new Chart(ctx, {
+                // 既存のチャートを破棄
+                if (portfolioChartInstance) {
+                    portfolioChartInstance.destroy();
+                }
+
+                // 新しいチャートを作成
+                portfolioChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: result.data,
                     options: {
@@ -86,12 +95,31 @@ async function loadPortfolioChartMobile() {
                         plugins: {
                             legend: {
                                 display: true,
-                                position: 'bottom'
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 10
+                                    }
+                                }
                             }
                         },
                         scales: {
                             y: {
-                                beginAtZero: true
+                                beginAtZero: true,
+                                ticks: {
+                                    font: {
+                                        size: 10
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        size: 9
+                                    },
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
                             }
                         }
                     }
@@ -120,7 +148,9 @@ async function loadProductsMobile() {
 
                 html += `
                     <div class="product-card">
-                        <div class="product-name">${product.name}</div>
+                        <div class="product-name" onclick="showProductDetailMobile(${product.id})" style="cursor: pointer; color: #667eea;">
+                            ${product.name} <i class="bi bi-chevron-right" style="font-size: 12px;"></i>
+                        </div>
                         <div class="product-info">購入日: ${product.purchase_date}</div>
                         <div class="product-info">購入価格: ¥${product.purchase_price.toLocaleString()}</div>
                         <div class="product-info">現在価格: ¥${currentPrice.toLocaleString()}</div>
@@ -161,6 +191,10 @@ async function loadCategoriesForFormMobile() {
             result.categories.forEach(cat => {
                 select.innerHTML += `<option value="${cat}">${cat}</option>`;
             });
+
+            // 購入日に今日の日付を設定
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('purchase-date-mobile').value = today;
         }
     } catch (error) {
         console.error('カテゴリー読み込みエラー:', error);
@@ -168,20 +202,45 @@ async function loadCategoriesForFormMobile() {
 }
 
 // 市場価格更新用商品読み込み
+let allProductsForPrice = [];
+
 async function loadProductsForMarketPriceMobile() {
     try {
         const result = await eel.get_products()();
 
         if (result.success) {
+            allProductsForPrice = result.products;
             const select = document.getElementById('select-product-mobile');
             select.innerHTML = '<option value="">商品を選択してください</option>';
 
             result.products.forEach(product => {
                 select.innerHTML += `<option value="${product.id}">${product.name}</option>`;
             });
+
+            // 日付フィールドに今日の日付を設定
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('market-price-date-mobile').value = today;
         }
     } catch (error) {
         console.error('商品読み込みエラー:', error);
+    }
+}
+
+// 商品選択時に現在価格を表示
+function onProductSelectedForPrice() {
+    const productId = document.getElementById('select-product-mobile').value;
+
+    if (!productId) {
+        document.getElementById('product-price-info').style.display = 'none';
+        return;
+    }
+
+    const product = allProductsForPrice.find(p => p.id == productId);
+
+    if (product) {
+        const currentPrice = product.latest_market_price || product.purchase_price;
+        document.getElementById('current-price-display').textContent = `¥${currentPrice.toLocaleString()}`;
+        document.getElementById('product-price-info').style.display = 'block';
     }
 }
 
@@ -201,8 +260,15 @@ async function updateMarketPriceMobile() {
 
         if (result.success) {
             alert('価格を更新しました');
+            // フォームをリセット
             document.getElementById('market-price-value-mobile').value = '';
-            document.getElementById('market-price-date-mobile').value = '';
+            document.getElementById('select-product-mobile').value = '';
+            document.getElementById('product-price-info').style.display = 'none';
+            // 日付は今日のままにする
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('market-price-date-mobile').value = today;
+            // 商品リストを再読み込み（現在価格が更新されているため）
+            loadProductsForMarketPriceMobile();
         } else {
             alert('エラー: ' + result.error);
         }
@@ -403,6 +469,138 @@ async function unsellProductMobile(productId, productName) {
     } catch (error) {
         console.error('商品復元エラー:', error);
         alert('商品復元に失敗しました');
+    }
+}
+
+// 商品詳細表示
+let productChartInstance = null;
+
+async function showProductDetailMobile(productId) {
+    try {
+        // 商品情報を取得
+        const productResult = await eel.get_product_by_id(productId)();
+
+        if (!productResult.success) {
+            alert('商品情報の取得に失敗しました');
+            return;
+        }
+
+        const product = productResult.product;
+        const currentPrice = product.latest_market_price || product.purchase_price;
+        const profit = currentPrice - product.purchase_price;
+        const profitClass = profit >= 0 ? 'text-success' : 'text-danger';
+
+        // モーダルタイトル設定
+        document.getElementById('detailProductName').textContent = product.name;
+
+        // 商品詳細を表示
+        document.getElementById('product-detail-content').innerHTML = `
+            <div class="mb-2"><strong>購入日:</strong> ${product.purchase_date}</div>
+            <div class="mb-2"><strong>購入価格:</strong> ¥${product.purchase_price.toLocaleString()}</div>
+            <div class="mb-2"><strong>定価:</strong> ¥${product.retail_price.toLocaleString()}</div>
+            <div class="mb-2"><strong>現在価格:</strong> ¥${currentPrice.toLocaleString()}</div>
+            <div class="mb-2 ${profitClass}"><strong>損益:</strong> ${profit >= 0 ? '+' : ''}¥${profit.toLocaleString()}</div>
+            ${product.categories && product.categories.length > 0 ?
+                `<div class="mb-2"><strong>カテゴリー:</strong> ${product.categories.join(', ')}</div>` : ''}
+        `;
+
+        // 価格履歴を取得して表示
+        const historyResult = await eel.get_market_price_history(productId)();
+
+        if (historyResult.success && historyResult.history.length > 0) {
+            let historyHtml = '<div class="list-group">';
+            historyResult.history.forEach(h => {
+                historyHtml += `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>${h.price_date}</span>
+                            <span class="fw-bold">¥${h.price.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            historyHtml += '</div>';
+            document.getElementById('price-history-list').innerHTML = historyHtml;
+
+            // 価格推移グラフを表示
+            const chartResult = await eel.get_product_chart_data(productId)();
+
+            if (chartResult.success) {
+                const ctx = document.getElementById('product-chart-mobile');
+
+                if (ctx) {
+                    // 既存のチャートを破棄
+                    if (productChartInstance) {
+                        productChartInstance.destroy();
+                    }
+
+                    // 購入価格のライン用データを作成
+                    const purchasePriceLine = new Array(chartResult.data.labels.length).fill(chartResult.data.purchase_price);
+
+                    productChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: chartResult.data.labels,
+                            datasets: [
+                                chartResult.data.datasets[0],
+                                {
+                                    label: '購入価格',
+                                    data: purchasePriceLine,
+                                    borderColor: 'rgb(255, 99, 132)',
+                                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                    borderDash: [5, 5],
+                                    tension: 0
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    labels: {
+                                        font: {
+                                            size: 10
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        font: {
+                                            size: 10
+                                        }
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        font: {
+                                            size: 9
+                                        },
+                                        maxRotation: 45,
+                                        minRotation: 45
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        } else {
+            document.getElementById('price-history-list').innerHTML = '<p class="text-muted">価格履歴がありません</p>';
+        }
+
+        // モーダルを表示
+        const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('商品詳細表示エラー:', error);
+        alert('商品詳細の表示に失敗しました');
     }
 }
 

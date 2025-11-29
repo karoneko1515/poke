@@ -178,7 +178,9 @@
         </div>
         <div class="summary-card">
             <h3><i class="bi bi-graph-up"></i> 最近の推移</h3>
-            <canvas id="portfolio-chart-mobile"></canvas>
+            <div style="position: relative; height: 250px;">
+                <canvas id="portfolio-chart-mobile"></canvas>
+            </div>
         </div>
     </div>
 
@@ -225,13 +227,16 @@
     <div id="market-price" class="tab-content">
         <div class="mb-3">
             <label for="select-product-mobile" class="form-label">商品を選択</label>
-            <select class="form-select" id="select-product-mobile">
+            <select class="form-select" id="select-product-mobile" onchange="onProductSelectedForPrice()">
                 <option value="">商品を選択してください</option>
             </select>
         </div>
+        <div id="product-price-info" class="alert alert-info" style="display: none;">
+            <small>現在価格: <span id="current-price-display">-</span></small>
+        </div>
         <div class="mb-3">
-            <label for="market-price-value-mobile" class="form-label">現在価格</label>
-            <input type="number" class="form-control" id="market-price-value-mobile">
+            <label for="market-price-value-mobile" class="form-label">新しい価格</label>
+            <input type="number" class="form-control" id="market-price-value-mobile" placeholder="価格を入力">
         </div>
         <div class="mb-3">
             <label for="market-price-date-mobile" class="form-label">日付</label>
@@ -251,13 +256,48 @@
     <!-- その他 -->
     <div id="more" class="tab-content">
         <div class="summary-card">
-            <h3><i class="bi bi-gear"></i> その他</h3>
+            <h3><i class="bi bi-gear"></i> その他の機能</h3>
+            <button class="btn btn-outline-primary btn-mobile" onclick="showMobileTab('sold-products')">
+                <i class="bi bi-archive"></i> 売却済み商品
+            </button>
             <button class="btn btn-outline-primary btn-mobile" onclick="showCategoryManagement()">
                 <i class="bi bi-tags"></i> カテゴリー管理
             </button>
             <button class="btn btn-outline-primary btn-mobile" onclick="showProfitLoss()">
                 <i class="bi bi-cash-stack"></i> 損益詳細
             </button>
+        </div>
+    </div>
+
+    <!-- 商品詳細モーダル -->
+    <div class="modal fade" id="productDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailProductName">商品詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="product-detail-content">
+                        <!-- 商品詳細はJavaScriptで生成 -->
+                    </div>
+                    <div class="mt-3">
+                        <h6>価格履歴</h6>
+                        <div id="price-history-list">
+                            <!-- 価格履歴はJavaScriptで生成 -->
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>価格推移グラフ</h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="product-chart-mobile"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -275,9 +315,9 @@
             <i class="bi bi-plus-circle"></i>
             登録
         </a>
-        <a class="nav-item" onclick="showMobileTab('sold-products')">
-            <i class="bi bi-archive"></i>
-            売却済み
+        <a class="nav-item" onclick="showMobileTab('market-price')">
+            <i class="bi bi-graph-up"></i>
+            価格更新
         </a>
         <a class="nav-item" onclick="showMobileTab('more')">
             <i class="bi bi-three-dots"></i>
