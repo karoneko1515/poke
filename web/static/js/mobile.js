@@ -27,6 +27,8 @@ function showMobileTab(tabId) {
         loadCategoriesForFormMobile();
     } else if (tabId === 'market-price') {
         loadProductsForMarketPriceMobile();
+    } else if (tabId === 'sold-products') {
+        loadSoldProductsMobile();
     }
 }
 
@@ -124,6 +126,17 @@ async function loadProductsMobile() {
                         <div class="product-info">現在価格: ¥${currentPrice.toLocaleString()}</div>
                         <div class="product-profit ${profitClass}">
                             損益: ${profit >= 0 ? '+' : ''}¥${profit.toLocaleString()}
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary me-1" onclick="editProductMobile(${product.id})">
+                                <i class="bi bi-pencil"></i> 編集
+                            </button>
+                            <button class="btn btn-sm btn-success me-1" onclick="sellProductMobile(${product.id}, '${product.name}')">
+                                <i class="bi bi-cash"></i> 売却
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProductMobile(${product.id}, '${product.name}')">
+                                <i class="bi bi-trash"></i> 削除
+                            </button>
                         </div>
                     </div>
                 `;
@@ -247,9 +260,155 @@ document.addEventListener('DOMContentLoaded', function() {
     loadDashboardMobile();
 });
 
+// 商品編集
+async function editProductMobile(productId) {
+    const product_name = prompt('商品名を入力してください:');
+    if (!product_name) return;
+
+    const purchase_date = prompt('購入日を入力してください (YYYY-MM-DD):');
+    if (!purchase_date) return;
+
+    const purchase_price = prompt('購入価格を入力してください:');
+    if (!purchase_price) return;
+
+    const retail_price = prompt('定価を入力してください:');
+    if (!retail_price) return;
+
+    try {
+        const result = await eel.update_product(
+            productId,
+            product_name,
+            purchase_date,
+            parseInt(purchase_price),
+            parseInt(retail_price),
+            []
+        )();
+
+        if (result.success) {
+            alert('商品を更新しました');
+            loadProductsMobile();
+        } else {
+            alert('エラー: ' + result.error);
+        }
+    } catch (error) {
+        console.error('商品更新エラー:', error);
+        alert('商品更新に失敗しました');
+    }
+}
+
+// 商品売却
+async function sellProductMobile(productId, productName) {
+    if (!confirm(`${productName}を売却しますか？`)) return;
+
+    const sold_price = prompt('売却価格を入力してください:');
+    if (!sold_price) return;
+
+    const sold_date = prompt('売却日を入力してください (YYYY-MM-DD):');
+
+    try {
+        const result = await eel.sell_product(productId, parseInt(sold_price), sold_date || null)();
+
+        if (result.success) {
+            alert('商品を売却しました');
+            loadProductsMobile();
+        } else {
+            alert('エラー: ' + result.error);
+        }
+    } catch (error) {
+        console.error('商品売却エラー:', error);
+        alert('商品売却に失敗しました');
+    }
+}
+
+// 商品削除
+async function deleteProductMobile(productId, productName) {
+    if (!confirm(`${productName}を完全に削除しますか？この操作は取り消せません。`)) return;
+
+    try {
+        const result = await eel.delete_product(productId)();
+
+        if (result.success) {
+            alert('商品を削除しました');
+            // 現在アクティブなタブを確認してリロード
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab && activeTab.id === 'sold-products') {
+                loadSoldProductsMobile();
+            } else {
+                loadProductsMobile();
+            }
+        } else {
+            alert('削除に失敗しました');
+        }
+    } catch (error) {
+        console.error('商品削除エラー:', error);
+        alert('商品削除に失敗しました');
+    }
+}
+
+// 売却済み商品一覧を読み込み
+async function loadSoldProductsMobile() {
+    try {
+        const result = await eel.get_sold_products()();
+
+        if (result.success) {
+            const products = result.products;
+            let html = '';
+
+            products.forEach(product => {
+                const profit = product.sold_price - product.purchase_price;
+                const profitClass = profit >= 0 ? 'text-success' : 'text-danger';
+
+                html += `
+                    <div class="product-card">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-info">購入日: ${product.purchase_date}</div>
+                        <div class="product-info">売却日: ${product.sold_date || 'N/A'}</div>
+                        <div class="product-info">購入価格: ¥${product.purchase_price.toLocaleString()}</div>
+                        <div class="product-info">売却価格: ¥${product.sold_price.toLocaleString()}</div>
+                        <div class="product-profit ${profitClass}">
+                            損益: ${profit >= 0 ? '+' : ''}¥${profit.toLocaleString()}
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning me-1" onclick="unsellProductMobile(${product.id}, '${product.name}')">
+                                <i class="bi bi-arrow-counterclockwise"></i> 元に戻す
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProductMobile(${product.id}, '${product.name}')">
+                                <i class="bi bi-trash"></i> 削除
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('sold-products-list-mobile').innerHTML = html || '<div class="loading">売却済み商品がありません</div>';
+        }
+    } catch (error) {
+        console.error('売却済み商品読み込みエラー:', error);
+    }
+}
+
+// 商品を元に戻す（売却取消）
+async function unsellProductMobile(productId, productName) {
+    if (!confirm(`${productName}を商品一覧に戻しますか？`)) return;
+
+    try {
+        const result = await eel.unsell_product(productId)();
+
+        if (result.success) {
+            alert('商品を元に戻しました');
+            loadSoldProductsMobile();
+        } else {
+            alert('元に戻すのに失敗しました');
+        }
+    } catch (error) {
+        console.error('商品復元エラー:', error);
+        alert('商品復元に失敗しました');
+    }
+}
+
 // プレースホルダー関数（PC版との互換性のため）
 function showSoldProducts() {
-    alert('この機能はPC版をご利用ください');
+    showMobileTab('sold-products');
 }
 
 function showCategoryManagement() {

@@ -611,6 +611,22 @@ def generate_category_chart():
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
+@eel.expose
+def delete_product(product_id):
+    try:
+        success = db.delete_product(int(product_id))
+        return {'success': success}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@eel.expose
+def unsell_product(product_id):
+    try:
+        success = db.unsell_product(int(product_id))
+        return {'success': success}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
 if __name__ == '__main__':
     # ブラウザでアプリケーションを起動
     try:

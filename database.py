@@ -813,3 +813,50 @@ class DatabaseManager:
 
         conn.close()
         return outdated_products
+
+    def delete_product(self, product_id: int) -> bool:
+        """商品を完全に削除（関連する市場価格データも削除）"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            # 商品名を取得
+            cursor.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+            result = cursor.fetchone()
+            if not result:
+                conn.close()
+                return False
+
+            product_name = result[0]
+
+            # 市場価格データを削除
+            cursor.execute('DELETE FROM market_prices WHERE product_name = ?', (product_name,))
+
+            # 商品を削除
+            cursor.execute('DELETE FROM products WHERE id = ?', (product_id,))
+
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"商品削除エラー: {e}")
+            return False
+
+    def unsell_product(self, product_id: int) -> bool:
+        """売却済み商品を元に戻す（is_soldをFalseに、sold_priceとsold_dateをNULLに）"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                UPDATE products
+                SET is_sold = FALSE, sold_price = NULL, sold_date = NULL
+                WHERE id = ?
+            ''', (product_id,))
+
+            conn.commit()
+            conn.close()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"商品復元エラー: {e}")
+            return False

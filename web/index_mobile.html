@@ -240,13 +240,18 @@
         <button class="btn btn-primary btn-mobile" onclick="updateMarketPriceMobile()">価格を更新</button>
     </div>
 
+    <!-- 売却済み商品 -->
+    <div id="sold-products" class="tab-content">
+        <h2 style="font-size: 18px; margin-bottom: 15px;"><i class="bi bi-archive"></i> 売却済み商品</h2>
+        <div id="sold-products-list-mobile">
+            <!-- 売却済み商品リストはJavaScriptで生成 -->
+        </div>
+    </div>
+
     <!-- その他 -->
     <div id="more" class="tab-content">
         <div class="summary-card">
-            <h3><i class="bi bi-gear"></i> 設定</h3>
-            <button class="btn btn-outline-primary btn-mobile" onclick="showSoldProducts()">
-                <i class="bi bi-archive"></i> 売却済み商品
-            </button>
+            <h3><i class="bi bi-gear"></i> その他</h3>
             <button class="btn btn-outline-primary btn-mobile" onclick="showCategoryManagement()">
                 <i class="bi bi-tags"></i> カテゴリー管理
             </button>
@@ -270,9 +275,9 @@
             <i class="bi bi-plus-circle"></i>
             登録
         </a>
-        <a class="nav-item" onclick="showMobileTab('market-price')">
-            <i class="bi bi-graph-up"></i>
-            価格更新
+        <a class="nav-item" onclick="showMobileTab('sold-products')">
+            <i class="bi bi-archive"></i>
+            売却済み
         </a>
         <a class="nav-item" onclick="showMobileTab('more')">
             <i class="bi bi-three-dots"></i>
@@ -283,7 +288,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/eel.js"></script>
-    <script src="/static/js/app.js"></script>
     <script src="/static/js/mobile.js"></script>
 </body>
 </html>
