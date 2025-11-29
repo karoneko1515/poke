@@ -8,7 +8,6 @@ import json
 import base64
 from io import BytesIO
 from database import DatabaseManager
-from bottle import request, static_file
 
 # Matplotlibの日本語フォント設定
 plt.rcParams['font.family'] = ['Hiragino Sans', 'Yu Gothic', 'Meiryo', 'Takao', 'IPAexGothic', 'IPAPGothic', 'VL PGothic', 'Noto Sans CJK JP']
@@ -18,22 +17,6 @@ db = DatabaseManager()
 
 # Eelアプリケーションの初期化
 eel.init('web')
-
-# デバイス判定関数
-def is_mobile_device():
-    """User-Agentからモバイルデバイスかどうか判定"""
-    user_agent = request.environ.get('HTTP_USER_AGENT', '').lower()
-    mobile_keywords = ['iphone', 'android', 'mobile', 'windows phone', 'blackberry']
-    return any(keyword in user_agent for keyword in mobile_keywords)
-
-# カスタムルート: ルートアクセス時にデバイス判定してHTMLを返す
-@eel.bottle.route('/')
-def index():
-    """デバイスに応じて適切なHTMLを返す"""
-    if is_mobile_device():
-        return static_file('index_mobile.html', root='./web')
-    else:
-        return static_file('index.html', root='./web')
 
 @eel.expose
 def add_product(name, purchase_date, purchase_price, retail_price, image_file=None, categories=None):
