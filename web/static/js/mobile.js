@@ -37,42 +37,44 @@ async function loadDashboardMobile() {
     try {
         const result = await eel.get_portfolio_summary()();
 
-        if (result.success) {
+        console.log('Portfolio summary result:', result);
+
+        if (result && result.success && result.summary) {
             const summary = result.summary;
 
             const html = `
                 <div class="summary-card">
                     <h3>総投資額</h3>
-                    <div class="value">¥${summary.total_purchase.toLocaleString()}</div>
+                    <div class="value">¥${(summary.total_purchase || 0).toLocaleString()}</div>
                 </div>
                 <div class="summary-card">
                     <h3>現在価値</h3>
-                    <div class="value">¥${summary.total_market_value.toLocaleString()}</div>
-                    <div class="change ${summary.unrealized_profit >= 0 ? 'positive' : 'negative'}">
-                        含み損益: ${summary.unrealized_profit >= 0 ? '+' : ''}¥${summary.unrealized_profit.toLocaleString()}
+                    <div class="value">¥${(summary.total_market_value || 0).toLocaleString()}</div>
+                    <div class="change ${(summary.unrealized_profit || 0) >= 0 ? 'positive' : 'negative'}">
+                        含み損益: ${(summary.unrealized_profit || 0) >= 0 ? '+' : ''}¥${(summary.unrealized_profit || 0).toLocaleString()}
                     </div>
                 </div>
                 <div class="summary-card">
                     <h3>総損益</h3>
-                    <div class="value ${summary.total_profit >= 0 ? 'positive' : 'negative'}">
-                        ${summary.total_profit >= 0 ? '+' : ''}¥${summary.total_profit.toLocaleString()}
+                    <div class="value ${(summary.total_profit || 0) >= 0 ? 'positive' : 'negative'}">
+                        ${(summary.total_profit || 0) >= 0 ? '+' : ''}¥${(summary.total_profit || 0).toLocaleString()}
                     </div>
                     <div class="change">
-                        ${summary.total_profit_percentage >= 0 ? '+' : ''}${summary.total_profit_percentage.toFixed(2)}%
+                        実現損益: ¥${(summary.realized_profit || 0).toLocaleString()}
                     </div>
                 </div>
                 <div class="summary-card">
                     <h3>保有商品</h3>
-                    <div class="value">${summary.holding_count}点</div>
-                    <div class="change">売却済み: ${summary.sold_count}点</div>
+                    <div class="value">${summary.holding_count || 0}点</div>
+                    <div class="change">売却済み: ${summary.sold_count || 0}点</div>
                 </div>
                 <div class="summary-card">
                     <h3>パフォーマンス</h3>
                     <div class="product-info">
-                        ROI (保有): <span class="${summary.roi >= 0 ? 'text-success' : 'text-danger'}">${summary.roi.toFixed(2)}%</span>
+                        ROI (保有): <span class="${(summary.roi || 0) >= 0 ? 'text-success' : 'text-danger'}">${(summary.roi || 0).toFixed(2)}%</span>
                     </div>
                     <div class="product-info">
-                        総合ROI: <span class="${summary.total_roi >= 0 ? 'text-success' : 'text-danger'}">${summary.total_roi.toFixed(2)}%</span>
+                        総合ROI: <span class="${(summary.total_roi || 0) >= 0 ? 'text-success' : 'text-danger'}">${(summary.total_roi || 0).toFixed(2)}%</span>
                     </div>
                 </div>
             `;
@@ -82,11 +84,13 @@ async function loadDashboardMobile() {
             // チャート描画
             loadPortfolioChartMobile();
         } else {
-            document.getElementById('summary-cards-mobile').innerHTML = '<div class="loading">データがありません</div>';
+            console.error('Invalid result:', result);
+            document.getElementById('summary-cards-mobile').innerHTML = '<div class="loading">データの読み込みに失敗しました</div>';
         }
     } catch (error) {
         console.error('ダッシュボード読み込みエラー:', error);
-        document.getElementById('summary-cards-mobile').innerHTML = '<div class="loading">エラーが発生しました</div>';
+        console.error('Error stack:', error.stack);
+        document.getElementById('summary-cards-mobile').innerHTML = `<div class="loading">エラーが発生しました: ${error.message}</div>`;
     }
 }
 
@@ -273,33 +277,47 @@ async function loadProductsForMarketPriceMobile() {
 // 更新されていない商品を読み込み
 async function loadOutdatedProductsMobile() {
     try {
-        const daysThreshold = document.getElementById('outdated-days-mobile').value || 7;
+        const daysThreshold = parseInt(document.getElementById('outdated-days-mobile').value) || 7;
+        console.log('Loading outdated products with threshold:', daysThreshold);
+
         const result = await eel.get_outdated_products(daysThreshold)();
+        console.log('Outdated products result:', result);
 
         const container = document.getElementById('outdated-products-list-mobile');
 
-        if (result.success && result.products && result.products.length > 0) {
+        if (!container) {
+            console.error('Container not found: outdated-products-list-mobile');
+            return;
+        }
+
+        if (result && result.success && result.products && result.products.length > 0) {
             let html = '<div class="list-group mt-2">';
             result.products.forEach(product => {
-                const daysSince = Math.floor(product.days_since_update);
+                const daysSince = Math.floor(product.days_since_update || 0);
+                const productName = (product.name || '不明').replace(/'/g, "\\'");
                 html += `
-                    <div class="list-group-item" onclick="selectProductForUpdate(${product.id}, '${product.name}')">
+                    <div class="list-group-item" onclick="selectProductForUpdate(${product.id}, '${productName}')" style="cursor: pointer;">
                         <div class="d-flex justify-content-between">
-                            <strong>${product.name}</strong>
+                            <strong>${product.name || '不明'}</strong>
                             <span class="badge bg-warning">${daysSince}日前</span>
                         </div>
-                        <small class="text-muted">現在価格: ¥${(product.latest_market_price || product.purchase_price).toLocaleString()}</small>
+                        <small class="text-muted">現在価格: ¥${(product.latest_market_price || product.purchase_price || 0).toLocaleString()}</small>
                     </div>
                 `;
             });
             html += '</div>';
             container.innerHTML = html;
         } else {
-            container.innerHTML = '<p class="text-muted mt-2">更新が必要な商品はありません</p>';
+            const message = result && result.error ? result.error : '更新が必要な商品はありません';
+            container.innerHTML = `<p class="text-muted mt-2">${message}</p>`;
         }
     } catch (error) {
         console.error('更新が必要な商品の読み込みエラー:', error);
-        document.getElementById('outdated-products-list-mobile').innerHTML = '<p class="text-danger mt-2">エラーが発生しました</p>';
+        console.error('Error stack:', error.stack);
+        const container = document.getElementById('outdated-products-list-mobile');
+        if (container) {
+            container.innerHTML = `<p class="text-danger mt-2">エラーが発生しました: ${error.message}</p>`;
+        }
     }
 }
 
