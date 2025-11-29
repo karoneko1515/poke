@@ -48,14 +48,32 @@ async function loadDashboardMobile() {
                 <div class="summary-card">
                     <h3>現在価値</h3>
                     <div class="value">¥${summary.total_market_value.toLocaleString()}</div>
-                    <div class="change ${summary.total_profit >= 0 ? 'positive' : 'negative'}">
-                        ${summary.total_profit >= 0 ? '+' : ''}¥${summary.total_profit.toLocaleString()}
-                        (${summary.total_profit_percentage >= 0 ? '+' : ''}${summary.total_profit_percentage.toFixed(2)}%)
+                    <div class="change ${summary.unrealized_profit >= 0 ? 'positive' : 'negative'}">
+                        含み損益: ${summary.unrealized_profit >= 0 ? '+' : ''}¥${summary.unrealized_profit.toLocaleString()}
                     </div>
                 </div>
                 <div class="summary-card">
-                    <h3>保有商品数</h3>
-                    <div class="value">${summary.total_products}点</div>
+                    <h3>総損益</h3>
+                    <div class="value ${summary.total_profit >= 0 ? 'positive' : 'negative'}">
+                        ${summary.total_profit >= 0 ? '+' : ''}¥${summary.total_profit.toLocaleString()}
+                    </div>
+                    <div class="change">
+                        ${summary.total_profit_percentage >= 0 ? '+' : ''}${summary.total_profit_percentage.toFixed(2)}%
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <h3>保有商品</h3>
+                    <div class="value">${summary.holding_count}点</div>
+                    <div class="change">売却済み: ${summary.sold_count}点</div>
+                </div>
+                <div class="summary-card">
+                    <h3>パフォーマンス</h3>
+                    <div class="product-info">
+                        ROI (保有): <span class="${summary.roi >= 0 ? 'text-success' : 'text-danger'}">${summary.roi.toFixed(2)}%</span>
+                    </div>
+                    <div class="product-info">
+                        総合ROI: <span class="${summary.total_roi >= 0 ? 'text-success' : 'text-danger'}">${summary.total_roi.toFixed(2)}%</span>
+                    </div>
                 </div>
             `;
 
@@ -63,9 +81,12 @@ async function loadDashboardMobile() {
 
             // チャート描画
             loadPortfolioChartMobile();
+        } else {
+            document.getElementById('summary-cards-mobile').innerHTML = '<div class="loading">データがありません</div>';
         }
     } catch (error) {
         console.error('ダッシュボード読み込みエラー:', error);
+        document.getElementById('summary-cards-mobile').innerHTML = '<div class="loading">エラーが発生しました</div>';
     }
 }
 
@@ -77,8 +98,15 @@ async function loadPortfolioChartMobile() {
     try {
         const result = await eel.get_portfolio_chart_data()();
 
-        if (result.success) {
-            const ctx = document.getElementById('portfolio-chart-mobile');
+        const chartContainer = document.getElementById('portfolio-chart-container');
+        const ctx = document.getElementById('portfolio-chart-mobile');
+
+        if (result.success && result.data && result.data.labels && result.data.labels.length > 0) {
+            // チャートコンテナを表示
+            if (chartContainer) {
+                chartContainer.style.display = 'block';
+            }
+
             if (ctx) {
                 // 既存のチャートを破棄
                 if (portfolioChartInstance) {
@@ -109,6 +137,9 @@ async function loadPortfolioChartMobile() {
                                 ticks: {
                                     font: {
                                         size: 10
+                                    },
+                                    callback: function(value) {
+                                        return '¥' + value.toLocaleString();
                                     }
                                 }
                             },
@@ -125,9 +156,19 @@ async function loadPortfolioChartMobile() {
                     }
                 });
             }
+        } else {
+            // データがない場合はチャートを非表示にしてメッセージを表示
+            if (chartContainer) {
+                chartContainer.style.display = 'none';
+            }
+            console.log('チャートデータがありません');
         }
     } catch (error) {
         console.error('チャート読み込みエラー:', error);
+        const chartContainer = document.getElementById('portfolio-chart-container');
+        if (chartContainer) {
+            chartContainer.style.display = 'none';
+        }
     }
 }
 
@@ -220,10 +261,56 @@ async function loadProductsForMarketPriceMobile() {
             // 日付フィールドに今日の日付を設定
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('market-price-date-mobile').value = today;
+
+            // 更新されていない商品を自動で検索
+            loadOutdatedProductsMobile();
         }
     } catch (error) {
         console.error('商品読み込みエラー:', error);
     }
+}
+
+// 更新されていない商品を読み込み
+async function loadOutdatedProductsMobile() {
+    try {
+        const daysThreshold = document.getElementById('outdated-days-mobile').value || 7;
+        const result = await eel.get_outdated_products(daysThreshold)();
+
+        const container = document.getElementById('outdated-products-list-mobile');
+
+        if (result.success && result.products && result.products.length > 0) {
+            let html = '<div class="list-group mt-2">';
+            result.products.forEach(product => {
+                const daysSince = Math.floor(product.days_since_update);
+                html += `
+                    <div class="list-group-item" onclick="selectProductForUpdate(${product.id}, '${product.name}')">
+                        <div class="d-flex justify-content-between">
+                            <strong>${product.name}</strong>
+                            <span class="badge bg-warning">${daysSince}日前</span>
+                        </div>
+                        <small class="text-muted">現在価格: ¥${(product.latest_market_price || product.purchase_price).toLocaleString()}</small>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="text-muted mt-2">更新が必要な商品はありません</p>';
+        }
+    } catch (error) {
+        console.error('更新が必要な商品の読み込みエラー:', error);
+        document.getElementById('outdated-products-list-mobile').innerHTML = '<p class="text-danger mt-2">エラーが発生しました</p>';
+    }
+}
+
+// 更新が必要な商品をクリックしたときに価格更新フォームに自動入力
+function selectProductForUpdate(productId, productName) {
+    // 商品を選択
+    document.getElementById('select-product-mobile').value = productId;
+    // 現在価格を表示
+    onProductSelectedForPrice();
+    // スクロールして価格更新フォームに移動
+    document.querySelector('#market-price .summary-card:last-child').scrollIntoView({ behavior: 'smooth' });
 }
 
 // 商品選択時に現在価格を表示
@@ -290,6 +377,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const purchasePrice = document.getElementById('purchase-price-mobile').value;
             const retailPrice = document.getElementById('retail-price-mobile').value;
             const category = document.getElementById('category1-mobile').value;
+            const imageFile = document.getElementById('product-image-mobile').files[0];
+
+            let imageData = null;
+            if (imageFile) {
+                // 画像をBase64に変換
+                imageData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(imageFile);
+                });
+            }
 
             try {
                 const result = await eel.add_product(
@@ -297,19 +395,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     date,
                     purchasePrice,
                     retailPrice,
-                    null,
+                    imageData,
                     category ? [category] : []
                 )();
 
                 if (result.success) {
                     alert('商品を登録しました');
                     form.reset();
+                    document.getElementById('image-preview-mobile').style.display = 'none';
                 } else {
                     alert('エラー: ' + result.error);
                 }
             } catch (error) {
                 console.error('商品登録エラー:', error);
                 alert('商品登録に失敗しました');
+            }
+        });
+    }
+
+    // 画像プレビュー
+    const imageInput = document.getElementById('product-image-mobile');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview-img-mobile').src = e.target.result;
+                    document.getElementById('image-preview-mobile').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('image-preview-mobile').style.display = 'none';
             }
         });
     }

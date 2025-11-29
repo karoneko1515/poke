@@ -176,8 +176,8 @@
         <div id="summary-cards-mobile">
             <!-- サマリーカードはJavaScriptで生成 -->
         </div>
-        <div class="summary-card">
-            <h3><i class="bi bi-graph-up"></i> 最近の推移</h3>
+        <div class="summary-card" id="portfolio-chart-container">
+            <h3><i class="bi bi-graph-up"></i> ポートフォリオ推移</h3>
             <div style="position: relative; height: 250px;">
                 <canvas id="portfolio-chart-mobile"></canvas>
             </div>
@@ -214,6 +214,13 @@
                 <input type="number" class="form-control" id="retail-price-mobile" required>
             </div>
             <div class="mb-3">
+                <label for="product-image-mobile" class="form-label">商品画像（任意）</label>
+                <input type="file" class="form-control" id="product-image-mobile" accept="image/*">
+                <div id="image-preview-mobile" style="margin-top: 10px; display: none;">
+                    <img id="preview-img-mobile" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                </div>
+            </div>
+            <div class="mb-3">
                 <label for="categories-mobile" class="form-label">カテゴリー</label>
                 <select class="form-select" id="category1-mobile">
                     <option value="">カテゴリー1を選択</option>
@@ -225,24 +232,39 @@
 
     <!-- 市場価格更新 -->
     <div id="market-price" class="tab-content">
-        <div class="mb-3">
-            <label for="select-product-mobile" class="form-label">商品を選択</label>
-            <select class="form-select" id="select-product-mobile" onchange="onProductSelectedForPrice()">
-                <option value="">商品を選択してください</option>
-            </select>
+        <div class="summary-card">
+            <h3><i class="bi bi-exclamation-triangle"></i> 更新が必要な商品</h3>
+            <div class="d-flex align-items-center mb-2">
+                <input type="number" class="form-control" id="outdated-days-mobile" value="7" min="1" style="width: 80px; margin-right: 10px;">
+                <span>日以上</span>
+                <button class="btn btn-sm btn-primary ms-auto" onclick="loadOutdatedProductsMobile()">検索</button>
+            </div>
+            <div id="outdated-products-list-mobile">
+                <!-- 更新が必要な商品リスト -->
+            </div>
         </div>
-        <div id="product-price-info" class="alert alert-info" style="display: none;">
-            <small>現在価格: <span id="current-price-display">-</span></small>
+
+        <div class="summary-card mt-3">
+            <h3><i class="bi bi-pencil"></i> 価格を更新</h3>
+            <div class="mb-3">
+                <label for="select-product-mobile" class="form-label">商品を選択</label>
+                <select class="form-select" id="select-product-mobile" onchange="onProductSelectedForPrice()">
+                    <option value="">商品を選択してください</option>
+                </select>
+            </div>
+            <div id="product-price-info" class="alert alert-info" style="display: none;">
+                <small>現在価格: <span id="current-price-display">-</span></small>
+            </div>
+            <div class="mb-3">
+                <label for="market-price-value-mobile" class="form-label">新しい価格</label>
+                <input type="number" class="form-control" id="market-price-value-mobile" placeholder="価格を入力">
+            </div>
+            <div class="mb-3">
+                <label for="market-price-date-mobile" class="form-label">日付</label>
+                <input type="date" class="form-control" id="market-price-date-mobile">
+            </div>
+            <button class="btn btn-primary btn-mobile" onclick="updateMarketPriceMobile()">価格を更新</button>
         </div>
-        <div class="mb-3">
-            <label for="market-price-value-mobile" class="form-label">新しい価格</label>
-            <input type="number" class="form-control" id="market-price-value-mobile" placeholder="価格を入力">
-        </div>
-        <div class="mb-3">
-            <label for="market-price-date-mobile" class="form-label">日付</label>
-            <input type="date" class="form-control" id="market-price-date-mobile">
-        </div>
-        <button class="btn btn-primary btn-mobile" onclick="updateMarketPriceMobile()">価格を更新</button>
     </div>
 
     <!-- 売却済み商品 -->
