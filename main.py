@@ -594,6 +594,11 @@ def generate_category_chart():
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
+@eel.expose
+def ping():
+    """接続テスト用のエンドポイント。モバイルSafariの接続切断を検知するために使用。"""
+    return {'success': True, 'timestamp': datetime.now().isoformat()}
+
 if __name__ == '__main__':
     # ブラウザでアプリケーションを起動
     try:

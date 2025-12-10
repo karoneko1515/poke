@@ -17,6 +17,11 @@ let cacheTimestamp = {
 };
 const CACHE_DURATION = 30000; // 30秒
 
+// 接続監視機能（モバイルSafari対策）
+let isConnectionAlive = true;
+let connectionCheckInterval = null;
+let pageVisibilitySupported = typeof document.hidden !== 'undefined';
+
 // キャッシュ無効化関数
 function invalidateCache(type = 'all') {
     if (type === 'all' || type === 'products') {
@@ -33,9 +38,160 @@ function invalidateCache(type = 'all') {
     }
 }
 
+// 接続チェック関数（モバイルSafari対策）
+async function checkConnection() {
+    try {
+        const result = await Promise.race([
+            eel.ping()(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+        ]);
+
+        if (result && result.success) {
+            if (!isConnectionAlive) {
+                console.log('接続が復帰しました');
+                isConnectionAlive = true;
+                hideConnectionWarning();
+            }
+            return true;
+        } else {
+            throw new Error('Ping failed');
+        }
+    } catch (error) {
+        console.error('接続チェック失敗:', error);
+        if (isConnectionAlive) {
+            console.warn('バックエンドとの接続が切断されました');
+            isConnectionAlive = false;
+            showConnectionWarning();
+        }
+        return false;
+    }
+}
+
+// 接続警告を表示
+function showConnectionWarning() {
+    // 既に警告が表示されている場合は何もしない
+    if (document.getElementById('connection-warning')) {
+        return;
+    }
+
+    const warning = document.createElement('div');
+    warning.id = 'connection-warning';
+    warning.style.cssText = `
+        position: fixed;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(45deg, #ff6b6b, #ee5a6f);
+        color: white;
+        padding: 15px 30px;
+        border-radius: 25px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        z-index: 10000;
+        font-weight: bold;
+        text-align: center;
+        border: 3px solid #fff;
+        animation: slideDown 0.5s ease-out;
+    `;
+    warning.innerHTML = `
+        <div style="font-size: 1rem; margin-bottom: 5px;">⚠️ サーバーとの接続が切断されました</div>
+        <div style="font-size: 0.85rem; margin-bottom: 10px;">ページを再読み込みしてください</div>
+        <button onclick="location.reload()"
+                style="background: white; color: #ff6b6b; border: none; padding: 8px 20px;
+                       border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 0.9rem;">
+            再読み込み
+        </button>
+    `;
+
+    // アニメーション定義を追加
+    if (!document.getElementById('connection-warning-style')) {
+        const style = document.createElement('style');
+        style.id = 'connection-warning-style';
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    transform: translateX(-50%) translateY(-100px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(-50%) translateY(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    document.body.appendChild(warning);
+}
+
+// 接続警告を非表示
+function hideConnectionWarning() {
+    const warning = document.getElementById('connection-warning');
+    if (warning) {
+        warning.style.animation = 'slideDown 0.5s ease-out reverse';
+        setTimeout(() => {
+            if (warning.parentNode) {
+                warning.parentNode.removeChild(warning);
+            }
+        }, 500);
+    }
+}
+
+// ページの可視性が変わったときの処理
+function handleVisibilityChange() {
+    if (pageVisibilitySupported) {
+        if (!document.hidden) {
+            // ページがフォアグラウンドに戻った
+            console.log('ページがアクティブになりました。接続をチェックします...');
+            checkConnection();
+        }
+    }
+}
+
+// 定期的な接続チェックを開始
+function startConnectionMonitoring() {
+    // 既にインターバルが設定されている場合はクリア
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+    }
+
+    // 30秒ごとに接続チェック
+    connectionCheckInterval = setInterval(() => {
+        if (!document.hidden) {
+            checkConnection();
+        }
+    }, 30000);
+
+    // 可視性変更イベントリスナーを追加
+    if (pageVisibilitySupported) {
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    console.log('接続監視を開始しました');
+}
+
+// ローディングオーバーレイを表示
+function showLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+}
+
+// ローディングオーバーレイを非表示
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
 // アプリケーション初期化
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing app...');
+
+    // ローディングオーバーレイを表示
+    showLoadingOverlay();
 
     // モーダル初期化
     try {
@@ -68,14 +224,21 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Outdated days threshold initialization error:', error);
     }
 
-    // 少し遅らせて初期データ読み込み
-    setTimeout(() => {
+    // 少し遅らせて初期データ読み込み（並列化でパフォーマンス改善）
+    setTimeout(async () => {
         try {
-            loadDashboard();
-            loadProductsWithCategories();
-            loadCategoryOptionsForAllSelects();
+            // 複数のAPI呼び出しを並列実行
+            await Promise.all([
+                loadDashboard(),
+                loadProductsWithCategories(),
+                loadCategoryOptionsForAllSelects()
+            ]);
+            console.log('初期データの読み込みが完了しました');
         } catch (error) {
             console.error('Data loading error:', error);
+        } finally {
+            // データ読み込み完了後、ローディングオーバーレイを非表示
+            hideLoadingOverlay();
         }
     }, 100);
 
@@ -84,6 +247,13 @@ document.addEventListener('DOMContentLoaded', function() {
         setupFormHandlers();
     } catch (error) {
         console.error('Form handler setup error:', error);
+    }
+
+    // 接続監視を開始（モバイルSafari対策）
+    try {
+        startConnectionMonitoring();
+    } catch (error) {
+        console.error('Connection monitoring setup error:', error);
     }
 
     console.log('App initialization complete');
