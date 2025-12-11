@@ -24,3 +24,7 @@ ENV/
 *.swp
 *.swo
 *~
+
+# Migration and backup files
+migration/
+*.bak

@@ -28,7 +28,7 @@ def main():
         print("以下のコマンドを実行してセットアップしてください：")
         print("python3 -m venv venv")
         print("source venv/bin/activate")
-        print("pip install eel matplotlib pillow")
+        print("pip install -r requirements.txt")
         input("Enterキーを押して終了...")
         return
 
