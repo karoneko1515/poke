@@ -415,7 +415,7 @@ async function updateMarketPriceMobile() {
         const result = await apiPost('/api/market-prices', {
             product_id: parseInt(productId),
             price: parseFloat(price),
-            date: date
+            price_date: date
         });
 
         if (result.success) {
