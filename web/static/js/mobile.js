@@ -280,12 +280,16 @@ async function loadCategoriesForFormMobile() {
         const result = await apiGet('/api/categories');
 
         if (result.success) {
-            const select = document.getElementById('category1-mobile');
-            select.innerHTML = '<option value="">カテゴリーを選択</option>';
-
-            result.categories.forEach(cat => {
-                select.innerHTML += `<option value="${cat}">${cat}</option>`;
-            });
+            // 5つのセレクトボックスすべてにカテゴリーを読み込む
+            for (let i = 1; i <= 5; i++) {
+                const select = document.getElementById(`category${i}-mobile`);
+                if (select) {
+                    select.innerHTML = `<option value="">カテゴリー${i}を選択</option>`;
+                    result.categories.forEach(cat => {
+                        select.innerHTML += `<option value="${cat}">${cat}</option>`;
+                    });
+                }
+            }
 
             // 購入日に今日の日付を設定
             const today = new Date().toISOString().split('T')[0];
@@ -450,7 +454,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const date = document.getElementById('purchase-date-mobile').value;
             const purchasePrice = document.getElementById('purchase-price-mobile').value;
             const retailPrice = document.getElementById('retail-price-mobile').value;
-            const category = document.getElementById('category1-mobile').value;
+
+            // 5つのカテゴリーを収集
+            const categories = [];
+            for (let i = 1; i <= 5; i++) {
+                const catSelect = document.getElementById(`category${i}-mobile`);
+                const catValue = catSelect ? catSelect.value : '';
+                if (catValue && catValue.trim()) {
+                    categories.push(catValue.trim());
+                }
+            }
+
             const imageFile = document.getElementById('product-image-mobile').files[0];
 
             let imageData = null;
@@ -470,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     purchase_price: parseFloat(purchasePrice),
                     retail_price: parseFloat(retailPrice),
                     image_file: imageData,
-                    categories: category ? [category] : []
+                    categories: categories
                 });
 
                 if (result.success) {
