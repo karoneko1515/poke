@@ -129,6 +129,24 @@ def sell_product(product_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/products/<int:product_id>/unsell', methods=['POST'])
+def unsell_product(product_id):
+    """商品売却取り消し"""
+    try:
+        success = db.unsell_product(product_id)
+        return jsonify({'success': success})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """商品削除"""
+    try:
+        success = db.delete_product(product_id)
+        return jsonify({'success': success})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/products/search', methods=['GET'])
 def search_products():
     """商品検索"""

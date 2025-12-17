@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     purchase_date: date,
                     purchase_price: parseFloat(purchasePrice),
                     retail_price: parseFloat(retailPrice),
-                    image_data: imageData,
+                    image_file: imageData,
                     categories: category ? [category] : []
                 });
 
@@ -702,7 +702,7 @@ async function showProductDetailMobile(productId) {
         `;
 
         // 価格履歴を取得して表示
-        const historyResult = await apiGet(`/api/products/${productId}/price-history`);
+        const historyResult = await apiGet(`/api/products/${productId}/market-prices`);
 
         if (historyResult.success && historyResult.history.length > 0) {
             let historyHtml = '<div class="list-group">';
