@@ -412,7 +412,7 @@ async function updateMarketPriceMobile() {
     }
 
     try {
-        const result = await apiPost('/api/market-price', {
+        const result = await apiPost('/api/market-prices', {
             product_id: parseInt(productId),
             price: parseFloat(price),
             date: date
