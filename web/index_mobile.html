@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ポケモンカード資産管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* モバイル専用スタイル */
+        body {
+            padding-bottom: 70px; /* ボトムナビゲーション分の余白 */
+            font-size: 14px;
+        }
+
+        /* ヘッダー */
+        .mobile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .mobile-header h1 {
+            font-size: 20px;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        /* ボトムナビゲーション */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .bottom-nav .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 5px;
+            color: #666;
+            text-decoration: none;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .bottom-nav .nav-item.active {
+            color: #667eea;
+        }
+
+        .bottom-nav .nav-item i {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        /* タブコンテンツ */
+        .tab-content {
+            display: none;
+            padding: 15px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* カードスタイル */
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .summary-card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .summary-card .change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .summary-card .change.positive {
+            color: #28a745;
+        }
+
+        .summary-card .change.negative {
+            color: #dc3545;
+        }
+
+        /* 商品カード */
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .product-card .product-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .product-card .product-info {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .product-card .product-profit {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        /* ボタン */
+        .btn-mobile {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* フォーム */
+        .form-control, .form-select {
+            font-size: 16px;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        /* ローディング */
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- ヘッダー -->
+    <div class="mobile-header">
+        <h1><i class="bi bi-controller"></i> ポケモンカード資産管理</h1>
+    </div>
+
+    <!-- ダッシュボード -->
+    <div id="dashboard" class="tab-content active">
+        <div id="summary-cards-mobile">
+            <!-- サマリーカードはJavaScriptで生成 -->
+        </div>
+        <div class="summary-card" id="portfolio-chart-container">
+            <h3><i class="bi bi-graph-up"></i> ポートフォリオ推移</h3>
+            <div style="position: relative; height: 250px;">
+                <canvas id="portfolio-chart-mobile"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品一覧 -->
+    <div id="products" class="tab-content">
+        <div class="mb-3">
+            <input type="text" class="form-control" id="search-name-mobile" placeholder="商品名で検索">
+        </div>
+        <div id="products-list-mobile">
+            <!-- 商品リストはJavaScriptで生成 -->
+        </div>
+    </div>
+
+    <!-- 商品登録 -->
+    <div id="add-product" class="tab-content">
+        <form id="add-product-form-mobile">
+            <div class="mb-3">
+                <label for="product-name-mobile" class="form-label">商品名</label>
+                <input type="text" class="form-control" id="product-name-mobile" required>
+            </div>
+            <div class="mb-3">
+                <label for="purchase-date-mobile" class="form-label">購入日</label>
+                <input type="date" class="form-control" id="purchase-date-mobile" required>
+            </div>
+            <div class="mb-3">
+                <label for="purchase-price-mobile" class="form-label">購入価格</label>
+                <input type="number" class="form-control" id="purchase-price-mobile" required>
+            </div>
+            <div class="mb-3">
+                <label for="retail-price-mobile" class="form-label">定価</label>
+                <input type="number" class="form-control" id="retail-price-mobile" required>
+            </div>
+            <div class="mb-3">
+                <label for="product-image-mobile" class="form-label">商品画像（任意）</label>
+                <input type="file" class="form-control" id="product-image-mobile" accept="image/*">
+                <div id="image-preview-mobile" style="margin-top: 10px; display: none;">
+                    <img id="preview-img-mobile" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="categories-mobile" class="form-label">カテゴリー</label>
+                <select class="form-select" id="category1-mobile">
+                    <option value="">カテゴリー1を選択</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-mobile">商品を登録</button>
+        </form>
+    </div>
+
+    <!-- 市場価格更新 -->
+    <div id="market-price" class="tab-content">
+        <div class="summary-card">
+            <h3><i class="bi bi-exclamation-triangle"></i> 更新が必要な商品</h3>
+            <div class="d-flex align-items-center mb-2">
+                <input type="number" class="form-control" id="outdated-days-mobile" value="7" min="1" style="width: 80px; margin-right: 10px;">
+                <span>日以上</span>
+                <button class="btn btn-sm btn-primary ms-auto" onclick="loadOutdatedProductsMobile()">検索</button>
+            </div>
+            <div id="outdated-products-list-mobile">
+                <!-- 更新が必要な商品リスト -->
+            </div>
+        </div>
+
+        <div class="summary-card mt-3">
+            <h3><i class="bi bi-pencil"></i> 価格を更新</h3>
+            <div class="mb-3">
+                <label for="select-product-mobile" class="form-label">商品を選択</label>
+                <select class="form-select" id="select-product-mobile" onchange="onProductSelectedForPrice()">
+                    <option value="">商品を選択してください</option>
+                </select>
+            </div>
+            <div id="product-price-info" class="alert alert-info" style="display: none;">
+                <small>現在価格: <span id="current-price-display">-</span></small>
+            </div>
+            <div class="mb-3">
+                <label for="market-price-value-mobile" class="form-label">新しい価格</label>
+                <input type="number" class="form-control" id="market-price-value-mobile" placeholder="価格を入力">
+            </div>
+            <div class="mb-3">
+                <label for="market-price-date-mobile" class="form-label">日付</label>
+                <input type="date" class="form-control" id="market-price-date-mobile">
+            </div>
+            <button class="btn btn-primary btn-mobile" onclick="updateMarketPriceMobile()">価格を更新</button>
+        </div>
+    </div>
+
+    <!-- 売却済み商品 -->
+    <div id="sold-products" class="tab-content">
+        <h2 style="font-size: 18px; margin-bottom: 15px;"><i class="bi bi-archive"></i> 売却済み商品</h2>
+        <div id="sold-products-list-mobile">
+            <!-- 売却済み商品リストはJavaScriptで生成 -->
+        </div>
+    </div>
+
+    <!-- その他 -->
+    <div id="more" class="tab-content">
+        <div class="summary-card">
+            <h3><i class="bi bi-gear"></i> その他の機能</h3>
+            <button class="btn btn-outline-primary btn-mobile" onclick="showMobileTab('sold-products')">
+                <i class="bi bi-archive"></i> 売却済み商品
+            </button>
+            <button class="btn btn-outline-primary btn-mobile" onclick="showCategoryManagement()">
+                <i class="bi bi-tags"></i> カテゴリー管理
+            </button>
+            <button class="btn btn-outline-primary btn-mobile" onclick="showProfitLoss()">
+                <i class="bi bi-cash-stack"></i> 損益詳細
+            </button>
+        </div>
+    </div>
+
+    <!-- 商品詳細モーダル -->
+    <div class="modal fade" id="productDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailProductName">商品詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="product-detail-content">
+                        <!-- 商品詳細はJavaScriptで生成 -->
+                    </div>
+                    <div class="mt-3">
+                        <h6>価格履歴</h6>
+                        <div id="price-history-list">
+                            <!-- 価格履歴はJavaScriptで生成 -->
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>価格推移グラフ</h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="product-chart-mobile"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ボトムナビゲーション -->
+    <div class="bottom-nav">
+        <a class="nav-item active" onclick="showMobileTab('dashboard')">
+            <i class="bi bi-house-door-fill"></i>
+            ホーム
+        </a>
+        <a class="nav-item" onclick="showMobileTab('products')">
+            <i class="bi bi-box-seam"></i>
+            一覧
+        </a>
+        <a class="nav-item" onclick="showMobileTab('add-product')">
+            <i class="bi bi-plus-circle"></i>
+            登録
+        </a>
+        <a class="nav-item" onclick="showMobileTab('market-price')">
+            <i class="bi bi-graph-up"></i>
+            価格更新
+        </a>
+        <a class="nav-item" onclick="showMobileTab('more')">
+            <i class="bi bi-three-dots"></i>
+            その他
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/mobile.js"></script>
+</body>
+</html>
