@@ -101,12 +101,19 @@ async function loadDashboardMobile() {
                     </div>
                 </div>
                 <div class="summary-card">
+                    <h3>売却益</h3>
+                    <div class="value ${(summary.realized_profit || 0) >= 0 ? 'positive' : 'negative'}">
+                        ${(summary.realized_profit || 0) >= 0 ? '+' : ''}¥${(summary.realized_profit || 0).toLocaleString()}
+                    </div>
+                    <div class="change">売却金額 - 仕入額</div>
+                </div>
+                <div class="summary-card">
                     <h3>総損益</h3>
                     <div class="value ${(summary.total_profit || 0) >= 0 ? 'positive' : 'negative'}">
                         ${(summary.total_profit || 0) >= 0 ? '+' : ''}¥${(summary.total_profit || 0).toLocaleString()}
                     </div>
                     <div class="change">
-                        実現損益: ¥${(summary.realized_profit || 0).toLocaleString()}
+                        含み損益 + 売却益
                     </div>
                 </div>
                 <div class="summary-card">
@@ -227,7 +234,7 @@ async function loadPortfolioChartMobile() {
 async function loadProductsMobile() {
     try {
         const searchTerm = document.getElementById('search-name-mobile').value;
-        const endpoint = searchTerm ? `/api/products/search?query=${encodeURIComponent(searchTerm)}` : '/api/products';
+        const endpoint = searchTerm ? `/api/products/search?search_term=${encodeURIComponent(searchTerm)}` : '/api/products';
         const result = await apiGet(endpoint);
 
         if (result.success) {
